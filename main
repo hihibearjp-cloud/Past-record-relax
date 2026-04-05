@@ -1,0 +1,617 @@
+ 
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  
+  <!-- === iOS Web App 專屬設定 === -->
+  <meta name="apple-mobile-web-app-title" content="親師聯絡&輔導手札" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <title>親師聯絡&輔導手札</title>
+
+  <!-- 自動生成圖示腳本 -->
+  <script>
+    (function() {
+      var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" fill="#F4EDE4" /><rect x="86" y="86" width="340" height="340" rx="70" fill="#5C3A21" /><rect x="56" y="56" width="340" height="340" rx="70" fill="#FFFBF5" stroke="#5C3A21" stroke-width="24" /><circle cx="150" cy="150" r="48" fill="#5C3A21" transform="translate(10, 10)" /><circle cx="150" cy="150" r="48" fill="#FFB7B2" stroke="#5C3A21" stroke-width="16" /><circle cx="302" cy="150" r="48" fill="#5C3A21" transform="translate(10, 10)" /><circle cx="302" cy="150" r="48" fill="#B5EAD7" stroke="#5C3A21" stroke-width="16" /><circle cx="150" cy="302" r="48" fill="#5C3A21" transform="translate(10, 10)" /><circle cx="150" cy="302" r="48" fill="#FFF5BA" stroke="#5C3A21" stroke-width="16" /><circle cx="302" cy="302" r="48" fill="#5C3A21" transform="translate(10, 10)" /><circle cx="302" cy="302" r="48" fill="#C7CEEA" stroke="#5C3A21" stroke-width="16" /></svg>';
+      var canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512; var ctx = canvas.getContext('2d'); var img = new Image();
+      img.onload = function() { ctx.drawImage(img, 0, 0); var pngDataUrl = canvas.toDataURL('image/png'); var appleIcon = document.createElement('link'); appleIcon.rel = 'apple-touch-icon'; appleIcon.href = pngDataUrl; document.head.appendChild(appleIcon); var favicon = document.createElement('link'); favicon.rel = 'icon'; favicon.href = pngDataUrl; document.head.appendChild(favicon); };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+    })();
+  </script>
+
+  <!-- 引入 Tailwind CSS 與 Babel -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- 引入 Google 手寫風字體 (Klee One) -->
+  <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&display=swap" rel="stylesheet">
+
+  <style>
+    body { overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; background-color: #F4EDE4; }
+    .custom-scrollbar::-webkit-scrollbar { display: none; }
+    .custom-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    .action-btn { transition: all 0.15s ease; }
+    .action-btn:active { transform: scale(0.97); }
+    .guide-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    
+    /* 專屬簽名檔樣式：手寫、粗體、斜體 */
+    .signature-text {
+      font-family: 'Klee One', 'Comic Sans MS', 'Chalkboard SE', cursive;
+      font-weight: 900;
+      font-style: italic;
+    }
+
+    /* 普普風立體馬卡龍按鈕：咖啡色邊框 + 咖啡色字 */
+    .macaron-btn {
+      border: 2.5px solid #5C3A21 !important; 
+      color: #5C3A21 !important; 
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .macaron-btn svg {
+      stroke: #5C3A21 !important;
+    }
+    .macaron-btn-active {
+      transform: translate(4px, 4px) !important;
+      box-shadow: 0px 0px 0 #5C3A21 !important; 
+      background-image: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.05)); 
+    }
+    .macaron-btn-idle {
+      box-shadow: 4px 4px 0 #5C3A21 !important; 
+      transform: translate(0, 0) !important;
+    }
+    .macaron-btn:active {
+      transform: translate(4px, 4px) !important;
+      box-shadow: 0px 0px 0 #5C3A21 !important;
+    }
+
+    @keyframes bounce-gentle {
+      0%, 100% { transform: translateY(-5px); }
+      50% { transform: translateY(5px); }
+    }
+    .animate-bounce-gentle {
+      animation: bounce-gentle 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
+    import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0';
+    import { Calendar, FileText, Download, Trash2, Edit2, Plus, Save, AlertCircle, CheckSquare, Square, Clock, Filter, FileSpreadsheet, Settings, HelpCircle, X, Users, Upload, Database, AlertTriangle, Bell, PlusCircle, MessageCircle, Copy, CheckCircle2, Send, Smartphone, BookOpen, Lightbulb, ListChecks, ArrowRight, Zap, MessageSquare } from 'https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0';
+
+    // --- 笑話資料庫 ---
+    const coldJokes = [
+      "小明問：「老師，我會因為沒做的事被懲罰嗎？」\n老師：「當然不會。」\n小明：「太好了，我沒寫作業。」",
+      "為什麼企鵝只有肚子是白的？\n...\n...\n因為手太短洗不到背。🐧",
+      "老師：「小華，請用『不但…而且…』造句。」\n小華：「我爸爸不但有大肚子，而且還有雙下巴。」",
+      "透明的劍是什麼劍？\n...\n...\n看不見（劍）。⚔️",
+      "蜘蛛人是什麼顏色？\n...\n...\n白色的，因為 Spider-man (是白的人)。🕸️",
+      "老師：「小明，你為什麼上課睡覺？」\n小明：「我沒有睡覺，我是在閉目養神聽課。」\n老師：「那你為什麼一直點頭？」\n小明：「因為老師講得太有道理了。」",
+      "哪一種熊最厲害？\n...\n...\n灰熊（非常）厲害！🐻",
+      "有一天，小豬對豬媽媽說：「媽媽，大家都會講冷笑話，我也要講一個！」\n豬媽媽：「好啊，你說。」\n小豬：「好冷喔...」\n(全劇終)",
+      "什麼水果會發光？\n...\n...\n星芒（芒果）。🥭",
+      "有一天，紅豆打綠豆，紅豆打輸了。\n請問綠豆變成什麼？\n...\n紅豆冰（因為把紅豆打成冰）。\n那紅豆變成什麼？\n...\n綠豆沙（因為被綠豆打趴了）。"
+    ];
+
+    // --- 預設語錄資料庫 ---
+    const defaultTemplates = {
+      '正向鼓勵與生活關懷': [
+        "今天在校表現優異，主動參與討論且態度積極，值得鼓勵！",
+        "近期課堂積極舉手發言，答題正確率提升。請家長在家多給予肯定，建立孩子自信！",
+        "今日大掃除非常認真，負責區域一塵不染，展現極佳責任感，值得表揚！"
+      ],
+      '學習習慣與常規提醒': [
+        "今日上課認真，可惜忘了帶課本/文具。建議睡前提醒孩子整理書包，養成檢查習慣。",
+        "近期在校參與度高，但打掃易與同學聊天分心。已提醒『先完成份內工作』，請家長協助叮嚀。",
+        "在校與同學相處融洽，但作業/聯絡簿偶有遺漏。請家長協助檢視書寫狀況，培養責任感。",
+        "課堂專注度與參與度仍有進步空間。請家長協助提醒上課專心，鼓勵主動完成任務。"
+      ],
+      '生活作息與突發狀況': [
+        "今日上課略顯疲累。擔心過度使用3C影響專注與視力，建議家長與孩子約定使用時間。",
+        "今日情緒較波動，與同學發生口角。已引導『先停下來再溝通』，請家長多留意孩子心情。",
+        "今日到校時間較晚，易錯過晨間宣導。為確保學習步調，懇請家長協助提醒早點出門。",
+        "今日在校反映身體不適，已至健康中心休息觀察。請家長留意後續狀況，必要時多休息。",
+        "今日尚未到校，想確認是否身體不適或需請假？再請家長回覆或致電告知，謝謝。",
+        "近期上課精神不佳，老師有些擔心。再請家長協助留意孩子的居家作息與睡眠時間。",
+        "孩子近期有遲到情形，請家長協助調整作息，培養準時到校的習慣。",
+        "若有請假需求，請務必依規定完成手續，以利學校掌握學生出缺席狀況。"
+      ],
+      '班級與學校配合事項': [
+        "明日有體育課，請提醒孩子穿著體育服裝到校。",
+        "學校發放之重要通知或回條，請家長留意內容、簽名，並提醒孩子準時交回。",
+        "下週即將進行評量，請家長協助督促孩子在家複習，預祝考試順利！",
+        "近期早晚溫差大，請提醒孩子多帶保暖衣物，注意健康。",
+        "本週五為學校班親會，誠摯邀請家長踴躍參與，一同關心孩子學習狀況！",
+        "重要事項請家長與孩子一同確認，感謝配合學校事務，共同協助孩子成長。"
+      ],
+      '作業與考試表現': [
+        "孩子有作業未準時繳交，請家長協助督促按時完成。",
+        "作業是學習的重要環節，建議養成每日檢查與整理的習慣。",
+        "若有缺交情形，請儘速完成補交，以免影響學習進度。",
+        "近期測驗表現仍有加強空間，建議多加複習課堂內容。",
+        "可協助孩子規劃讀書時間，培養穩定的複習習慣。"
+      ],
+      '結語 (文末附加)': [
+        "感謝家長的支持與配合，讓我們一起協助孩子持續進步。",
+        "若有任何問題，歡迎隨時與老師聯繫，共同關心孩子成長。"
+      ]
+    };
+
+    const ClassroomLogApp = () => {
+      // --- 系統基礎設定 ---
+      useEffect(() => {
+        document.body.style.overscrollBehaviorY = 'none';
+        return () => { document.body.style.overscrollBehaviorY = 'auto'; };
+      }, []);
+
+      const getWeekday = (dateString) => {
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        return days[new Date(dateString).getDay()];
+      };
+
+      const defaultGradeOptions = ['一上', '一下', '二上', '二下', '三上', '三下'];
+      const periodOptions = ['早修', '一', '二', '三', '四', '午餐', '午休', '五', '六', '七', '八'];
+      const incidentCategoryOptions = ['1. 拒學/中輟', '2. 自傷/自殺', '3. 藥物濫用', '4. 性侵/性騷擾', '5. 家暴/兒虐', '6. 哀傷/失落', '7. 家庭/親子', '8. 情緒困擾', '9. 人際困擾', '10. 學習困擾', '11. 精神疾患', '12. 特教', '13. 偏差行為', '14. 性別/感情', '15. 生涯議題', '16. 其他'];
+      const defaultNotifiedOptions = ['父', '母', '資源班老師', '專輔老師', '學務處'];
+
+      // --- 狀態管理 ---
+      
+      // 動態學生人數 (預設 35)
+      const [studentCount, setStudentCount] = useState(() => {
+        const saved = localStorage.getItem('louisaClassroomStudentCount');
+        return saved ? parseInt(saved, 10) : 35;
+      });
+      const seatOptions = Array.from({ length: studentCount }, (_, i) => String(i + 1));
+
+      const [roster, setRoster] = useState(() => {
+        const saved = localStorage.getItem('louisaClassroomRoster');
+        return saved ? JSON.parse(saved) : { '1': '周杰倫', '2': '王力宏', '5': '蔡依林', '10': '孫燕姿', '11': '陳奕迅', '12': '梁靜茹' };
+      });
+
+      const [logs, setLogs] = useState(() => {
+        const saved = localStorage.getItem('louisaClassroomLogs');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      const [notifiedOptions, setNotifiedOptions] = useState(() => {
+        const saved = localStorage.getItem('louisaNotifiedOptions');
+        return saved ? JSON.parse(saved) : defaultNotifiedOptions;
+      });
+
+      const [templates, setTemplates] = useState(() => {
+        const saved = localStorage.getItem('louisaClassroomTemplates_v4');
+        return saved ? JSON.parse(saved) : defaultTemplates;
+      });
+
+      const [gradeOptions, setGradeOptions] = useState(() => {
+        const saved = localStorage.getItem('louisaGradeOptions');
+        return saved ? JSON.parse(saved) : defaultGradeOptions;
+      });
+
+      useEffect(() => { localStorage.setItem('louisaClassroomStudentCount', studentCount.toString()); }, [studentCount]);
+      useEffect(() => { localStorage.setItem('louisaClassroomRoster', JSON.stringify(roster)); }, [roster]);
+      useEffect(() => { localStorage.setItem('louisaClassroomLogs', JSON.stringify(logs)); }, [logs]);
+      useEffect(() => { localStorage.setItem('louisaNotifiedOptions', JSON.stringify(notifiedOptions)); }, [notifiedOptions]);
+      useEffect(() => { localStorage.setItem('louisaClassroomTemplates_v4', JSON.stringify(templates)); }, [templates]);
+      useEffect(() => { localStorage.setItem('louisaGradeOptions', JSON.stringify(gradeOptions)); }, [gradeOptions]);
+
+      const [activeTab, setActiveTab] = useState('contact'); 
+      
+      const [filterSeat, setFilterSeat] = useState('');
+      const [exportFilterSeat, setExportFilterSeat] = useState('');
+      const [selectedForExport, setSelectedForExport] = useState([]);
+
+      const [showStudentModal, setShowStudentModal] = useState(false);
+      const [studentModalTarget, setStudentModalTarget] = useState('new'); 
+      const [editingLog, setEditingLog] = useState(null);
+
+      const [tempSelectedSeats, setTempSelectedSeats] = useState([]);
+      const [batchImportText, setBatchImportText] = useState('');
+      const [customPartyInput, setCustomPartyInput] = useState('');
+      const fileInputRef = useRef(null);
+
+      const [newLog, setNewLog] = useState({
+        date: new Date().toISOString().split('T')[0], period: '', grade: gradeOptions[0] || '一上', seatNumber: '', type: 'general', incidentCategories: [], notifiedParties: [], student: '', content: '', teacher: '導師'
+      });
+
+      const [contactSeat, setContactSeat] = useState('');
+      const [contactCategory, setContactCategory] = useState(() => Object.keys(templates)[0] || '');
+      const [contactSelectedTemplateIdx, setContactSelectedTemplateIdx] = useState('');
+      const [contactDraft, setContactDraft] = useState('');
+      const [isCopied, setIsCopied] = useState(false);
+      
+      const [settingManageCategory, setSettingManageCategory] = useState(() => Object.keys(templates)[0] || '');
+
+      // --- 驚喜互動狀態 (笑話與午茶) ---
+      const [showWelcomeJoke, setShowWelcomeJoke] = useState(false);
+      const [randomJokeText, setRandomJokeText] = useState('');
+      const [showCoffeeBreak, setShowCoffeeBreak] = useState(false);
+
+      // 初次載入時，抽出一個笑話並顯示
+      useEffect(() => {
+        const joke = coldJokes[Math.floor(Math.random() * coldJokes.length)];
+        setRandomJokeText(joke);
+        setShowWelcomeJoke(true);
+      }, []);
+
+      // --- 邏輯功能 ---
+      const openStudentModal = (target) => {
+        setStudentModalTarget(target);
+        let currentSeats = [];
+        if (target === 'new' && newLog.seatNumber) currentSeats = newLog.seatNumber.split(', ');
+        if (target === 'edit' && editingLog.seatNumber) currentSeats = editingLog.seatNumber.split(', ');
+        if (target === 'contact' && contactSeat) currentSeats = contactSeat.split(', ');
+        setTempSelectedSeats(currentSeats);
+        setShowStudentModal(true);
+      };
+
+      const toggleSeatSelection = (seat) => setTempSelectedSeats(prev => prev.includes(seat) ? prev.filter(s => s !== seat) : [...prev, seat].sort((a,b) => parseInt(a) - parseInt(b)));
+
+      const confirmStudentSelection = () => {
+        const seatString = tempSelectedSeats.join(', ');
+        const studentString = tempSelectedSeats.map(seat => roster[seat] || '').filter(Boolean).join(', ');
+        
+        if (studentModalTarget === 'new') {
+          setNewLog(prev => ({ ...prev, seatNumber: seatString, student: studentString || prev.student }));
+        } else if (studentModalTarget === 'edit') {
+          setEditingLog(prev => ({ ...prev, seatNumber: seatString, student: studentString || prev.student }));
+        } else if (studentModalTarget === 'contact') {
+          setContactSeat(seatString);
+        }
+        setShowStudentModal(false);
+      };
+
+      const handleAddLog = (e) => {
+        e.preventDefault();
+        if (!newLog.content || (!newLog.student && !newLog.seatNumber && newLog.student !== '全班')) return alert('請填寫對象與事件內容。');
+        setLogs([{ id: Date.now(), ...newLog }, ...logs]);
+        setNewLog({ ...newLog, period: '', seatNumber: '', type: 'general', incidentCategories: [], notifiedParties: [], student: '', content: '' });
+        alert('紀錄已儲存。');
+      };
+
+      const handleEditSave = (e) => {
+        e.preventDefault();
+        if (!editingLog.content || (!editingLog.student && !editingLog.seatNumber && editingLog.student !== '全班')) return alert('請填寫對象與事件內容。');
+        setLogs(logs.map(l => l.id === editingLog.id ? editingLog : l));
+        setEditingLog(null);
+        alert('修改已儲存成功。');
+      };
+
+      const handleDelete = (id) => {
+        if (confirm('確定刪除此紀錄嗎？此動作無法復原。')) {
+          setLogs(logs.filter(log => log.id !== id));
+          setSelectedForExport(selectedForExport.filter(exportId => exportId !== id));
+        }
+      };
+
+      const toggleCategory = (category, target) => {
+        const updater = target === 'new' ? setNewLog : setEditingLog;
+        updater(prev => {
+          const current = prev.incidentCategories || [];
+          return { ...prev, incidentCategories: current.includes(category) ? current.filter(c => c !== category) : [...current, category] };
+        });
+      };
+
+      const toggleParty = (party, target) => {
+        const updater = target === 'new' ? setNewLog : setEditingLog;
+        updater(prev => {
+          const current = prev.notifiedParties || [];
+          return { ...prev, notifiedParties: current.includes(party) ? current.filter(p => p !== party) : [...current, party] };
+        });
+      };
+
+      const handleAddCustomParty = (e, target) => {
+        e.preventDefault();
+        const trimmed = customPartyInput.trim();
+        if (trimmed && !notifiedOptions.includes(trimmed)) {
+          setNotifiedOptions([...notifiedOptions, trimmed]);
+          toggleParty(trimmed, target);
+        }
+        setCustomPartyInput('');
+      };
+
+      const handleBatchImport = () => {
+        if(!batchImportText.trim()) return;
+        const names = batchImportText.split('\n').map(n => n.trim()).filter(n => n);
+        const newRoster = { ...roster };
+        const newCount = Math.max(studentCount, names.length);
+        setStudentCount(newCount);
+        names.forEach((name, index) => { newRoster[String(index + 1)] = name; });
+        setRoster(newRoster); setBatchImportText(''); 
+        alert(`成功匯入 ${names.length} 筆學生姓名！班級總人數已自動調整為 ${newCount} 人。`);
+      };
+
+      const handleBackupJSON = () => {
+        const blob = new Blob([JSON.stringify({ studentCount, roster, logs, notifiedOptions, templates, gradeOptions, exportDate: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a'); link.href = url;
+        link.download = `手札備份_${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(url);
+      };
+
+      const handleRestoreJSON = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.roster && data.logs && confirm('警告：這將會覆蓋您目前的資料。確定要還原嗎？')) {
+              setRoster(data.roster); setLogs(data.logs); 
+              if (data.studentCount) setStudentCount(data.studentCount);
+              if (data.notifiedOptions) setNotifiedOptions(data.notifiedOptions);
+              if (data.gradeOptions) setGradeOptions(data.gradeOptions);
+              if (data.templates) {
+                setTemplates(data.templates);
+                const firstCat = Object.keys(data.templates)[0] || '';
+                setContactCategory(firstCat); setSettingManageCategory(firstCat);
+              }
+              alert('資料還原成功！');
+            } else if (!data.roster || !data.logs) alert('檔案格式錯誤，缺少必要資料。');
+          } catch (err) { alert('解析檔案失敗，請確定這是一個正確的 JSON 備份檔。'); }
+        };
+        reader.readAsText(file); e.target.value = ''; 
+      };
+
+      const handleClearAllData = () => {
+        if (confirm('⚠️ 將會清除系統內「所有」的日誌與名單資料！確定嗎？') && confirm('二次確認：資料清除後將【永遠無法復原】，確定？')) {
+          setLogs([]); setRoster({}); setNotifiedOptions(defaultNotifiedOptions); setTemplates(defaultTemplates); setStudentCount(35); setGradeOptions(defaultGradeOptions);
+          setContactCategory(Object.keys(defaultTemplates)[0] || ''); setSettingManageCategory(Object.keys(defaultTemplates)[0] || '');
+          localStorage.removeItem('louisaClassroomLogs'); localStorage.removeItem('louisaClassroomRoster'); localStorage.removeItem('louisaNotifiedOptions'); localStorage.removeItem('louisaClassroomTemplates'); localStorage.removeItem('louisaClassroomTemplates_v2'); localStorage.removeItem('louisaClassroomTemplates_v3'); localStorage.removeItem('louisaClassroomTemplates_v4'); localStorage.removeItem('louisaClassroomStudentCount'); localStorage.removeItem('louisaGradeOptions');
+          alert('🧹 資料已徹底清除。');
+        }
+      };
+
+      const handleExportExcel = () => {
+        let csvContent = '\uFEFF日期,星期,節次,年級,座號,姓名,類型,事件細項,通知對象,內容,紀錄教師\n';
+        const data = filterSeat ? logs.filter(log => log.seatNumber?.split(', ').includes(filterSeat)) : logs;
+        [...data].sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(log => {
+          const row = [log.date, getWeekday(log.date), log.period || '', log.grade || '', `"${log.seatNumber || ''}"`, `"${log.student || ''}"`, log.type === 'incident' ? '偶發事件' : '一般班務', `"${log.incidentCategories?.join('、') || ''}"`, `"${log.notifiedParties?.join('、') || ''}"`, `"${(log.content || '').replace(/"/g, '""')}"`, log.teacher || ''];
+          csvContent += row.join(",") + "\n";
+        });
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob); link.download = `親師聯絡&輔導手札_${filterSeat ? `${filterSeat}號` : '總表'}_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+      };
+
+      const handleExportWord = () => {
+        if (selectedForExport.length === 0) return alert('請先勾選要匯出的項目。');
+        const exportData = logs.filter(log => selectedForExport.includes(log.id)).sort((a, b) => new Date(a.date) - new Date(b.date));
+        let htmlContent = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset="utf-8"><title>輔導記錄表</title><style>body { font-family: "BiauKai", "標楷體", sans-serif; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid black; padding: 6px; text-align: center; font-size: 12pt; } .c-left { text-align: left; vertical-align: top; }</style></head><body><table border="1" cellspacing="0" cellpadding="5"><tr><th rowspan="${exportData.length + 2}" style="width:35px;font-size:16pt;letter-spacing:5px">重<br/>要<br/>輔<br/>導<br/>記<br/>錄</th><th rowspan="2">年<br/>級</th><th colspan="5">日　　期</th><th rowspan="2">座<br/>號</th><th rowspan="2">姓<br/>名</th><th rowspan="2" style="width:35%">輔　導　內　容　要　點</th><th rowspan="2">導<br/>師</th><th rowspan="2">輔<br/>導<br/>室</th></tr><tr><th>年</th><th>月</th><th>日</th><th>星期</th><th>節次</th></tr>`;
+        exportData.forEach((log) => {
+          const d = new Date(log.date);
+          htmlContent += `<tr><td>${log.grade||''}</td><td>${d.getFullYear()-1911}</td><td>${d.getMonth()+1}</td><td>${d.getDate()}</td><td>${getWeekday(log.date)}</td><td>${log.period||''}</td><td>${log.seatNumber||''}</td><td>${log.student}</td><td class="c-left">${log.incidentCategories?.length ? `<strong>【${log.incidentCategories.join('、')}】</strong><br/>` : ''}${log.notifiedParties?.length ? `<span style="color:#666">[通知對象：${log.notifiedParties.join('、')}]</span><br/><br/>` : (log.incidentCategories?.length?'<br/>':'')}${log.content.replace(/\n/g, '<br/>')}</td><td></td><td></td></tr>`;
+        });
+        htmlContent += `</table></body></html>`;
+        const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' }); const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob); link.download = `輔導記錄表_${new Date().toISOString().split('T')[0]}.doc`; link.click();
+      };
+
+      const handleCategoryChange = (e) => {
+        const val = e.target.value;
+        if (val === 'custom_new_category') {
+          const newCat = prompt('請輸入「新分類」的名稱：');
+          if (newCat && newCat.trim() && !templates[newCat]) {
+            setTemplates(prev => ({...prev, [newCat.trim()]: []}));
+            setContactCategory(newCat.trim());
+          } else if (newCat && templates[newCat]) {
+            alert('此分類已經存在！');
+            setContactCategory(newCat);
+          } else {
+            setContactCategory(Object.keys(templates)[0] || '');
+          }
+        } else {
+          setContactCategory(val);
+        }
+        setContactSelectedTemplateIdx('');
+        setContactDraft('');
+      };
+
+      const handleSelectContactTemplate = (e) => {
+        const val = e.target.value;
+        setContactSelectedTemplateIdx(val);
+        if (val === '') {
+          setContactDraft('');
+          return;
+        } else if (val === 'custom_new_template') {
+          setContactDraft('');
+          return;
+        }
+
+        const template = templates[contactCategory][val];
+        
+        if (contactCategory.includes('結語')) {
+          setContactDraft(`${contactDraft ? contactDraft + '\n\n' : ''}${template}`);
+          return;
+        }
+
+        let prefix = '親愛的家長您好，\n\n';
+        if (contactSeat) {
+          const names = contactSeat.split(', ').map(s => roster[s] || s).filter(Boolean).join('、');
+          prefix = `家長您好，${names} `;
+        } else if (contactCategory.includes('班級') || contactCategory.includes('通知')) {
+          prefix = '各位家長好，\n\n';
+        }
+        
+        setContactDraft(`${prefix}${template}`);
+      };
+
+      const handleSaveAsTemplate = () => {
+         if(!contactDraft.trim()) return alert('請先在下方編輯區輸入內容！');
+         const confirmMsg = prompt('請確認要儲存的語錄內容\n(建議移除開頭稱呼，以利日後重複套用)：', contactDraft);
+         if(confirmMsg && confirmMsg.trim()) {
+             const newTemplates = {...templates};
+             if(!newTemplates[contactCategory]) newTemplates[contactCategory] = [];
+             newTemplates[contactCategory].push(confirmMsg.trim());
+             setTemplates(newTemplates);
+             alert(`✅ 已成功將此內容加入「${contactCategory}」的常用語錄中！`);
+             setContactSelectedTemplateIdx(String(newTemplates[contactCategory].length - 1));
+         }
+      };
+
+      const copyToClipboard = () => {
+        if (!contactDraft.trim()) return false;
+        const textArea = document.createElement("textarea");
+        textArea.value = contactDraft;
+        document.body.appendChild(textArea);
+        textArea.select();
+        let success = false;
+        try {
+          success = document.execCommand('copy');
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) { console.error('複製失敗', err); }
+        document.body.removeChild(textArea);
+        return success;
+      };
+
+      const handleCopyAndSaveLog = (silent = false) => {
+        if (!contactDraft.trim()) {
+            if(!silent) alert('請先產生或輸入訊息內容！');
+            return false;
+        }
+        
+        copyToClipboard();
+
+        let studentName = '全班';
+        let notified = ['父', '母']; 
+        if (contactCategory.includes('班級') || contactCategory.includes('通知')) {
+          notified = []; 
+        } else if (contactSeat) {
+          studentName = contactSeat.split(', ').map(s => roster[s] || s).filter(Boolean).join(', ');
+        }
+
+        const newContactLog = {
+          id: Date.now(),
+          date: new Date().toISOString().split('T')[0],
+          period: '',
+          grade: newLog.grade,
+          seatNumber: contactSeat || '',
+          type: 'general',
+          incidentCategories: [],
+          notifiedParties: notified,
+          student: studentName,
+          content: `【親師聯繫紀錄 - ${contactCategory}】\n已發送訊息內容：\n${contactDraft}`,
+          teacher: newLog.teacher
+        };
+
+        setLogs(prev => [newContactLog, ...prev]);
+        if(!silent) alert('✅ 訊息已成功複製至剪貼簿！\n\n💾 且已同步將此紀錄存入「紀錄閱覽」中。');
+        return true;
+      };
+
+      const handleSendToLine = () => {
+         if(handleCopyAndSaveLog(true)) {
+             window.open(`https://line.me/R/msg/text/?${encodeURIComponent(contactDraft)}`, '_blank');
+         }
+      };
+
+      const handleSendToLineOA = () => {
+         if(handleCopyAndSaveLog(true)) {
+             alert('✅ 內容已複製並自動存入手札。\n\n即將嘗試開啟「LINE 官方帳號」App，請於聊天室手動貼上發送！');
+             window.location.href = "lineat://"; 
+         }
+      };
+
+      const handleSendToSMS = () => {
+         if(handleCopyAndSaveLog(true)) {
+             const ua = navigator.userAgent.toLowerCase();
+             const isIOS = /iphone|ipad|ipod/.test(ua);
+             const prefix = isIOS ? 'sms:&body=' : 'sms:?body=';
+             window.location.href = prefix + encodeURIComponent(contactDraft);
+         }
+      };
+
+      // 處理自訂年級
+      const handleGradeChange = (e, isEdit = false) => {
+        const val = e.target.value;
+        if (val === 'custom_new_grade') {
+          const newGrade = prompt('請輸入「新年級/班級」的名稱（例如：八上、高一忠）：');
+          if (newGrade && newGrade.trim()) {
+            const trimmed = newGrade.trim();
+            if (!gradeOptions.includes(trimmed)) {
+              setGradeOptions([...gradeOptions, trimmed]);
+            }
+            if (isEdit) setEditingLog({...editingLog, grade: trimmed});
+            else setNewLog({...newLog, grade: trimmed});
+          }
+        } else {
+          if (isEdit) setEditingLog({...editingLog, grade: val});
+          else setNewLog({...newLog, grade: val});
+        }
+      };
+
+      // --- 視覺設計配置 ---
+      const macaronTabs = [
+        { id: 'guide', icon: BookOpen, label: '說明', bg: '#D5E8D4' },
+        { id: 'add', icon: Plus, label: '撰寫', bg: '#FFB7B2' },
+        { id: 'contact', icon: MessageCircle, label: '聯繫', bg: '#FFDAC1' },
+        { id: 'list', icon: FileText, label: '閱覽', bg: '#B5EAD7' },
+        { id: 'export', icon: Download, label: '匯出', bg: '#FFF5BA' },
+        { id: 'settings', icon: Settings, label: '設定', bg: '#C7CEEA' }
+      ];
+
+      return (
+        <div className="min-h-screen text-[#3E2C20] font-sans selection:bg-[#D5C8BA] selection:text-[#3E2C20] flex flex-col relative">
+          
+          {/* ====================================================
+              驚喜模組一：上工前的隨機冷笑話 (Welcome Modal)
+          ==================================================== */}
+          {showWelcomeJoke && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#3E2C20]/80 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-[#FFFBF5] border-[4px] border-[#5C3A21] w-full max-w-sm rounded-[32px] flex flex-col shadow-[8px_8px_0_#5C3A21] transform transition-transform">
+                <div className="p-6 text-center">
+                  <div className="text-6xl mb-5 animate-bounce-gentle">🤣</div>
+                  <h3 className="font-black text-2xl text-[#5C3A21] mb-5 tracking-wide">老師，上工前笑一下吧！</h3>
+                  <div className="bg-[#F4EDE4] p-5 rounded-2xl border-[3px] border-[#D5C8BA] text-left">
+                    <p className="text-[#5C4535] text-lg font-bold whitespace-pre-line leading-relaxed">
+                      {randomJokeText}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-5 border-t-[3px] border-[#D5C8BA] flex justify-center bg-[#EADDCE] rounded-b-[28px]">
+                  <button onClick={() => setShowWelcomeJoke(false)} className="w-full py-3.5 bg-[#5C3A21] text-[#FFFBF5] font-black text-xl tracking-widest rounded-xl shadow-[4px_4px_0_#3E2C20] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all">
+                    好哦，準備上工！💪
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ====================================================
+              驚喜模組二：下班午茶慰勞 (Coffee Break Modal)
+          ==================================================== */}
+          {showCoffeeBreak && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#3E2C20]/80 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-[#FFFBF5] border-[4px] border-[#5C3A21] w-full max-w-sm rounded-[32px] flex flex-col shadow-[8px_8px_0_#5C3A21] transform transition-transform text-center">
+                <div className="p-8">
+                  <div className="text-7xl mb-6 animate-bounce-gentle">☕🍰</div>
+                  <h3 className="font-black text-3xl text-[#5C3A21] mb-4 tracking-wide">辛苦了，休息一下！</h3>
+                  <p className="text-[#8C7A6B] text-[17px] font-bold leading-relaxed px-2">
+                    老師您辛苦了！<br/>先放下手邊繁雜的班務，喝杯熱咖啡、吃塊甜蛋糕，好好放鬆一下吧！<br/><br/>✨ 明天也是充滿希望的一天 ✨
+                  </p>
+                </div>
+                <div className="p-5 border-t-[3px] border-[#D5C8BA] flex justify-center bg-[#EADDCE] rounded-b-[28px]">
+                  <button onClick={() => setShowCoffeeBreak(false)} className="w-full py-3.5 bg-[#C84B31] text-[#FFFBF5] font-black text-xl tracking-widest rounded-xl shadow-[4px_4px_0_#8A2E1B] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all">
+                    謝謝，我會好好休息 🥰
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          <header className="sticky top-0 z-30 pt-6 pb-6 px-4 border-b-4 border-[#D5C8BA] bg-[#F4EDE4]/95 backdrop-blur-md shadow-sm">
+            <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+              
+              {/* 頂部標題區 (加入下班按鈕) */}
+              <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-between md:justify-start">
+                <h1 className="text-2xl font-black text-[#3E2C20] tracking-widest flex items-center gap-3">
+                  <div className="w-11 h-11 bg-[#FFFBF5] border-[3px] border-[#5C3A21] rounded-xl grid grid-cols-2 gap-1 p-1 shadow-[4px_4px_0_#5C3A21] shrink-0 transition-transform hover:scale-105">
+                    <div className="rounded-full bg-[#FFB7B2] border-[1.5px] border-[#5C3A21] shadow-[1.5px_1.5px_0_#5C3A21]"></div>
+                    <div className="rounded-full bg-[#B5EAD7] border-[1.5px] border-[#5C3
